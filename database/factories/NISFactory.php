@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Utils\MoneyConfiguration;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use MoneyConfiguration;
 
 class NISFactory extends Factory
 {
@@ -17,8 +17,8 @@ class NISFactory extends Factory
         return [
             'effective_date' => $this->faker->date(),
             'rate_percentage' => $this->faker->regexify('[1-9]{1}\\.[0-9]{1,2}'),
-            'annual_income_threshold' => MoneyConfiguration::DefaultParser()
-                ->parse($this->faker->numerify('#######.##'),
+            'annual_income_threshold' => MoneyConfiguration::defaultParser()
+                ->parse($this->faker->regexify('[1-9]{6}\\.[0-9]{1,2}'),
                     MoneyConfiguration::defaultCurrency()),
         ];
     }
