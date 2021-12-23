@@ -36,6 +36,7 @@ class TaxCalculator
     {
         $formatter = new DecimalMoneyFormatter(new ISOCurrencies());
         return $formatter->format($money);
+        
     }
 
 
