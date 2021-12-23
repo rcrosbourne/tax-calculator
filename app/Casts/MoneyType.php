@@ -6,6 +6,8 @@ namespace App\Casts;
 
 use Illuminate\Contracts\Database\Eloquent\CastsAttributes;
 use InvalidArgumentException;
+use JetBrains\PhpStorm\NoReturn;
+use JetBrains\PhpStorm\Pure;
 use Money\Currencies\ISOCurrencies;
 use Money\Currency;
 use Money\Formatter\DecimalMoneyFormatter;
@@ -14,26 +16,36 @@ use Money\Parser\DecimalMoneyParser;
 
 class MoneyType implements CastsAttributes
 {
+    private Currency $currency;
+    private ISOCurrencies $supported_currencies;
 
-
-    public function set($model, string $key, $value, array $attributes)
-    {
-        // Set the value coming from the database from Database and covert it to money
-        // Parse string to money type
-        $moneyParser = new DecimalMoneyParser(new ISOCurrencies());
-        $currency = new Currency('JMD'); // we will take currency code from casts default to JMD for now
-        return $moneyParser->parse($value, $currency);
+    /**
+     * MoneyType constructor.
+     * @param  string  $currencyCode
+     */
+    public function __construct(
+        string $currencyCode
+    ) {
+        $this->currency = new Currency($currencyCode) ?? new Currency('JMD');
+        $this->supported_currencies = new ISOCurrencies();
     }
 
     public function get($model, string $key, $value, array $attributes)
     {
-        // Get the value and convert it to a string before saving to database;
-
-        if(!$value instanceof Money) {
-            throw new InvalidArgumentException('The given value is not a Money type');
+        if(! is_numeric($value) || !is_string($value)) {
+            throw new InvalidArgumentException('The given value cannot be reliably cast to Money Type');
         }
+        $moneyParser = new DecimalMoneyParser($this->supported_currencies);
+        return $moneyParser->parse($value, $this->currency);
+    }
 
-        $formatter = new DecimalMoneyFormatter(new ISOCurrencies());
+    public function set($model, string $key, $value, array $attributes)
+    {
+        if(! $value instanceof Money) {
+            throw new InvalidArgumentException("Value should be money type");
+        }
+        //Convert money to string
+        $formatter = new DecimalMoneyFormatter($this->supported_currencies);
         return $formatter->format($value);
     }
 }

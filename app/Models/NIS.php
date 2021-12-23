@@ -12,6 +12,6 @@ class NIS extends Model
 
     protected $casts = [
         'effective_date' => 'date',
-        'annual_income_threshold' => MoneyType::class
+        'annual_income_threshold' => MoneyType::class . ':JMD'
         ];
 }

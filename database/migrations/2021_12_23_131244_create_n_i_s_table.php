@@ -16,7 +16,7 @@ class CreateNISTable extends Migration
         Schema::create('n_i_s', function (Blueprint $table) {
             $table->id();
             $table->date('effective_date');
-            $table->string('rate_percent');
+            $table->string('rate_percentage');
             $table->string('annual_income_threshold');
             $table->timestamps();
         });
