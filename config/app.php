@@ -134,6 +134,8 @@ return [
     |
     */
 
+    'default_currency_code' => env('DEFAULT_CURRENCY_CODE', 'JMD'),
+
     'providers' => [
 
         /*
