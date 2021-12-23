@@ -23,7 +23,7 @@ class TaxCalculator
         public ?Currency $currency = NULL
     ) {
         $this->moneyParser = new DecimalMoneyParser(new ISOCurrencies());
-        $this->currency = $this->currency ?? new Currency('JMD');
+        $this->currency = $this->currency ?? new Currency(config('app.default_currency_code'));
 
         // Convert the value 3% to 0.03
         $this->nisPercent = $this->nisPercent / 100;
@@ -38,7 +38,6 @@ class TaxCalculator
         return $formatter->format($money);
 
     }
-
 
 
     /**
