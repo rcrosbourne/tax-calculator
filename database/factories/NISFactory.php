@@ -2,10 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Utils\MoneyConfiguration;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Money\Currencies\ISOCurrencies;
-use Money\Currency;
-use Money\Parser\DecimalMoneyParser;
 
 class NISFactory extends Factory
 {
@@ -16,13 +14,12 @@ class NISFactory extends Factory
      */
     public function definition()
     {
-        $currency = new Currency(config('app.default_currency_code'));
-        $supported_currencies = new ISOCurrencies();
-        $parser = new DecimalMoneyParser($supported_currencies);
         return [
             'effective_date' => $this->faker->date(),
             'rate_percentage' => $this->faker->regexify('[1-9]{1}\\.[0-9]{1,2}'),
-            'annual_income_threshold' => $parser->parse($this->faker->numerify('#######.##'), $currency),
+            'annual_income_threshold' => MoneyConfiguration::DefaultParser()
+                ->parse($this->faker->numerify('#######.##'),
+                    MoneyConfiguration::defaultCurrency()),
         ];
     }
 }
