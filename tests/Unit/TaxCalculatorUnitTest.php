@@ -2,7 +2,9 @@
 
 namespace Tests\Unit;
 
+use App\Enums\PensionType;
 use App\Models\NIS;
+use App\Models\Pension;
 use App\Models\TaxCalculator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use MoneyConfiguration;
@@ -70,5 +72,29 @@ class TaxCalculatorUnitTest extends TestCase
 
         $nisAmount = $calculator->nisAmount();
         $this->assertEquals('3750.00', TaxCalculator::formatAsString($nisAmount));
+    }
+
+    /** @test */
+    public function it_calculates_fixed_value_pension()
+    {
+        $calculator = new TaxCalculator(
+            monthlyGross: '264750.00',
+            monthlyPension: new Pension(type: PensionType::FIXED,  value: '10000.00')
+        );
+
+        $pensionAmount = $calculator->pensionAmount();
+        $this->assertEquals('10000.00', TaxCalculator::formatAsString($pensionAmount));
+    }
+
+    /** @test */
+    public function it_calculates_percent_of_gross_value_pension()
+    {
+        $calculator = new TaxCalculator(
+            monthlyGross: '253755.00',
+            monthlyPension: new Pension(type: PensionType::PERCENTAGE,  value: '10.0')
+        );
+
+        $pensionAmount = $calculator->pensionAmount();
+        $this->assertEquals('25375.50', TaxCalculator::formatAsString($pensionAmount));
     }
 }

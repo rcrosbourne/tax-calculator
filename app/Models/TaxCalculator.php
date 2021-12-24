@@ -3,6 +3,7 @@
 
 namespace App\Models;
 
+use App\Enums\PensionType;
 use Exception;
 use InvalidArgumentException;
 use Money\Currency;
@@ -22,6 +23,7 @@ class TaxCalculator
         public string $monthlyGross,
         public ?Currency $currency = null,
         public ?string $date = null,
+        public ?Pension $monthlyPension = null
     ) {
         $this->currency = $this->currency ?? MoneyConfiguration::defaultCurrency();
         $nisConfiguration = NIS::findEntryForDate($date);
@@ -55,5 +57,20 @@ class TaxCalculator
     private function nisMaxYearlyAmountBasedOnIncomeThreshold(): Money
     {
         return $this->nisAnnualIncomeThresholdAsMoney->multiply($this->nisPercent);
+    }
+
+    /**
+     * @return Money
+     */
+    public function pensionAmount(): Money
+    {
+        return match (true) {
+            $this->monthlyPension === null, !is_numeric($this->monthlyPension->value) => MoneyConfiguration::defaultParser()->parse('0.00',
+                MoneyConfiguration::defaultCurrency()),
+            $this->monthlyPension->type === PensionType::FIXED => MoneyConfiguration::defaultParser()->parse($this->monthlyPension->value,
+                MoneyConfiguration::defaultCurrency()),
+            $this->monthlyPension->type === PensionType::PERCENTAGE => $this->monthlyGrossAsMoney->multiply($this->monthlyPension->value)->divide('100'),
+            default => throw new InvalidArgumentException("Unable to calculate pension amount")
+        };
     }
 }
