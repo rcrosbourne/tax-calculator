@@ -73,4 +73,13 @@ class TaxCalculator
             default => throw new InvalidArgumentException("Unable to calculate pension amount")
         };
     }
+
+    /**
+     * @return Money
+     */
+    public function statutoryIncome(): Money
+    {
+        // Statuatory Income = Total Income - Pension Contributions - NIS
+        return $this->monthlyGrossAsMoney->subtract($this->pensionAmount())->subtract($this->nisAmount());
+    }
 }

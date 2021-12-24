@@ -7,7 +7,13 @@ use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Money\Money;
 
+/**
+ * @property Money $annual_income_threshold
+ * @property string $rate_percentage
+ * @property Carbon $effective_date
+ */
 class NIS extends Model
 {
     use HasFactory;
