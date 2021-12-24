@@ -15,6 +15,7 @@ class TaxCalculator
     private Money $monthlyGrossAsMoney;
     private Money $nisAnnualIncomeThresholdAsMoney;
     private string $nisPercent;
+    private string $educationTaxPercent;
 
     /**
      * @throws Exception
@@ -27,11 +28,13 @@ class TaxCalculator
     ) {
         $this->currency = $this->currency ?? MoneyConfiguration::defaultCurrency();
         $nisConfiguration = NIS::findEntryForDate($date);
+        $educationTaxConfiguration = EducationTax::findEntryForDate($date);
         if ($nisConfiguration == null) {
             throw new InvalidArgumentException("Unable to retrieve NIS values");
         }
         // Convert the value 3% to 0.03
         $this->nisPercent = $nisConfiguration->rate_percentage / 100;
+        $this->educationTaxPercent = $educationTaxConfiguration->rate_percentage / 100;
         $this->monthlyGrossAsMoney = MoneyConfiguration::defaultParser()->parse($this->monthlyGross, $this->currency);
         $this->nisAnnualIncomeThresholdAsMoney = $nisConfiguration->annual_income_threshold;
     }
@@ -81,5 +84,10 @@ class TaxCalculator
     {
         // Statuatory Income = Total Income - Pension Contributions - NIS
         return $this->monthlyGrossAsMoney->subtract($this->pensionAmount())->subtract($this->nisAmount());
+    }
+
+    public function educationTaxAmount(): Money
+    {
+        return $this->statutoryIncome()->multiply($this->educationTaxPercent);
     }
 }
