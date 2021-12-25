@@ -17,5 +17,6 @@ class DatabaseSeeder extends Seeder
         $this->call(NISSeeder::class);
         $this->call(NHTSeeder::class);
         $this->call(EducationTaxSeeder::class);
+        $this->call(IncomeTaxSeeder::class);
     }
 }
