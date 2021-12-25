@@ -5,9 +5,13 @@ namespace App\Models;
 
 use App\Enums\PensionType;
 use Exception;
+use Illuminate\Support\Facades\App;
 use InvalidArgumentException;
 use Money\Currency;
+use Money\Formatter\DecimalMoneyFormatter;
 use Money\Money;
+use Money\MoneyFormatter;
+use Money\MoneyParser;
 use MoneyConfiguration;
 
 class TaxCalculator
@@ -17,16 +21,17 @@ class TaxCalculator
     private string $nisPercent;
     private string $educationTaxPercent;
     private string $nhtPercent;
+    public MoneyFormatter $formatter;
+    public MoneyParser $parser;
 
-    /**
-     * @throws Exception
-     */
     public function __construct(
         public string $monthlyGross,
         public ?Currency $currency = null,
         public ?string $date = null,
-        public ?Pension $monthlyPension = null
+        public ?Pension $monthlyPension = null,
     ) {
+        $this->formatter = App::make(MoneyFormatter::class);
+        $this->parser = App::make(MoneyParser::class);
         // Setup Taxes
         $nisConfiguration = NIS::findEntryForDate($date);
         $nhtConfiguration = NHT::findEntryForDate($date);
@@ -48,13 +53,13 @@ class TaxCalculator
         $this->educationTaxPercent = $educationTaxConfiguration->rate_percentage / 100;
 
         $this->currency = $this->currency ?? MoneyConfiguration::defaultCurrency();
-        $this->monthlyGrossAsMoney = MoneyConfiguration::defaultParser()->parse($this->monthlyGross, $this->currency);
+        $this->monthlyGrossAsMoney = $this->parse($this->monthlyGross);
         $this->nisAnnualIncomeThresholdAsMoney = $nisConfiguration->annual_income_threshold;
     }
 
     public static function formatAsString(Money $money): string
     {
-        return MoneyConfiguration::defaultFormatter()->format($money);
+        return (App::make(MoneyFormatter::class))->format($money);
     }
 
     /**
@@ -81,10 +86,8 @@ class TaxCalculator
     public function pensionAmount(): Money
     {
         return match (true) {
-            $this->monthlyPension === null, !is_numeric($this->monthlyPension->value) => MoneyConfiguration::defaultParser()->parse('0.00',
-                MoneyConfiguration::defaultCurrency()),
-            $this->monthlyPension->type === PensionType::FIXED => MoneyConfiguration::defaultParser()->parse($this->monthlyPension->value,
-                MoneyConfiguration::defaultCurrency()),
+            $this->monthlyPension === null, !is_numeric($this->monthlyPension->value) => $this->parse('0.00'),
+            $this->monthlyPension->type === PensionType::FIXED => $this->parse($this->monthlyPension->value),
             $this->monthlyPension->type === PensionType::PERCENTAGE => $this->monthlyGrossAsMoney->multiply($this->monthlyPension->value)->divide('100'),
             default => throw new InvalidArgumentException("Unable to calculate pension amount")
         };
@@ -107,5 +110,15 @@ class TaxCalculator
     public function nhtAmount(): Money
     {
         return $this->monthlyGrossAsMoney->multiply($this->nhtPercent);
+    }
+
+    public function incomeTaxAmount(): Money
+    {
+        return $this->parse('0.00');
+    }
+
+    private function parse(string $moneyString): Money
+    {
+        return $this->parser->parse($moneyString, $this->currency);
     }
 }

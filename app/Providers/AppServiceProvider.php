@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Money\MoneyFormatter;
+use Money\MoneyParser;
+use MoneyConfiguration;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -13,7 +16,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        //
+        $this->app->singleton(MoneyFormatter::class, function() {
+            return MoneyConfiguration::defaultFormatter();
+        });
+        $this->app->singleton(MoneyParser::class, function() {
+            return MoneyConfiguration::defaultParser();
+        });
     }
 
     /**
