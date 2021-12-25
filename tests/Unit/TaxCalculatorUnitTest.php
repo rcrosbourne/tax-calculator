@@ -11,6 +11,7 @@ use App\Models\Pension;
 use App\Models\TaxCalculator;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
 use Money\Currency;
 use Money\Formatter\DecimalMoneyFormatter;
 use Money\Money;
@@ -99,6 +100,7 @@ class TaxCalculatorUnitTest extends TestCase
         $this->assertEquals('25375.50', TaxCalculator::formatAsString($pensionAmount));
     }
 
+
     /** @test */
     public function it_calculates_the_statutory_income_without_pension_included()
     {
@@ -108,8 +110,7 @@ class TaxCalculatorUnitTest extends TestCase
         NIS::factory()->create([
             'effective_date' => Carbon::now(),
             'rate_percentage' => '3.0',
-            'annual_income_threshold' => MoneyConfiguration::defaultParser()->parse('3000000',
-                MoneyConfiguration::defaultCurrency())
+            'annual_income_threshold' => $this->parse('3000000')
         ]);
         // NIS 3% up to 7500
         $monthlyStatuatoryIncome = $calculator->statutoryIncome();
@@ -126,12 +127,34 @@ class TaxCalculatorUnitTest extends TestCase
         NIS::factory()->create([
             'effective_date' => Carbon::now(),
             'rate_percentage' => '3.0',
-            'annual_income_threshold' => MoneyConfiguration::defaultParser()->parse('3000000',
-                MoneyConfiguration::defaultCurrency())
+            'annual_income_threshold' => $this->parse('3000000')
         ]);
         // NIS 3% up to 7500 + Pension = 25000
         $monthlyStatutoryIncome = $calculator->statutoryIncome();
         $this->assertEquals('217500.00', TaxCalculator::formatAsString($monthlyStatutoryIncome));
+    }
+
+    /** @test */
+    public function it_calculates_the_statutory_income_with_pension_and_other_income_included()
+    {
+        $calculator = new TaxCalculator(
+            monthlyGross: '100000.00',
+            otherTaxableIncome: '11000',
+            monthlyPension: new Pension(PensionType::PERCENTAGE, '10.0')
+        );
+        NIS::factory()->create([
+            'effective_date' => Carbon::now(),
+            'rate_percentage' => '3.0',
+            'annual_income_threshold' => $this->parse('3000000')
+        ]);
+        // NIS 3% up to 7500 + Pension = 25000
+        $pension = $calculator->pensionAmount();
+        $nisAmount = $calculator->nisAmount();
+        $monthlyStatutoryIncome = $calculator->statutoryIncome();
+
+        $this->assertEquals('10000.00', TaxCalculator::formatAsString($pension));
+        $this->assertEquals('3330.00', TaxCalculator::formatAsString($nisAmount));
+        $this->assertEquals('97670.00', TaxCalculator::formatAsString($monthlyStatutoryIncome));
     }
 
     /** @test */
@@ -142,8 +165,7 @@ class TaxCalculatorUnitTest extends TestCase
         NIS::factory()->create([
             'effective_date' => Carbon::now(),
             'rate_percentage' => '3.0',
-            'annual_income_threshold' => MoneyConfiguration::defaultParser()->parse('3000000',
-                MoneyConfiguration::defaultCurrency())
+            'annual_income_threshold' => $this->parse('3000000')
         ]);
         EducationTax::factory()->create([
             'effective_date' => Carbon::now(),
@@ -167,8 +189,7 @@ class TaxCalculatorUnitTest extends TestCase
         NIS::factory()->create([
             'effective_date' => Carbon::now(),
             'rate_percentage' => '3.0',
-            'annual_income_threshold' => MoneyConfiguration::defaultParser()->parse('3000000',
-                MoneyConfiguration::defaultCurrency())
+            'annual_income_threshold' => $this->parse('3000000')
         ]);
         EducationTax::factory()->create([
             'effective_date' => Carbon::now(),
@@ -270,18 +291,48 @@ class TaxCalculatorUnitTest extends TestCase
     }
 
     /** @test */
+    public function it_calculates_net_pay_including_voluntary_deductions()
+    {
+        // Calculate education tax on statutory income
+        $calculator = new TaxCalculator(
+            monthlyGross: '253750.00',
+            otherTaxableIncome: '11000.00',
+            monthlyPension: new Pension(type: PensionType::PERCENTAGE, value: '10'),
+            listOfVoluntaryDeductions: [
+                'carInsurance' => '3160.97',
+                'healthInsurance' => '6486.86',
+//                'carLoan' => '10000',
+//                'mortgage' => '10000',
+//                'otherLoan' => '10000',
+//                'savings' => '10000',
+//                'otherDeduction' => '10000',
+            ],
+            date: '2021-02-28',
+        );
+        // Subtotal deductions are all the deductions excluding income tax
+        // subTotal = gross - (nis + pension + nht + education tax)
+        // nis = 6000, edu = 3915.00, pension 20000, nht 4000 income tax 12248.00 + 93748
+        //total deductions = 46163.00
+        $netMonthlyIncome = $calculator->netMonthlyIncome();
+        $this->assertEquals('187726.36', TaxCalculator::formatAsString($netMonthlyIncome));
+    }
+
+    /** @test */
     public function it_can_return_full_tax_breakdown()
     {
         // Calculate education tax on statutory income
         $calculator = new TaxCalculator(
-            monthlyGross: '239703.00',
-            date: '2021-05-01'
+            monthlyGross: '253750',
+            otherTaxableIncome: '11000',
+            monthlyPension: new Pension(PensionType::PERCENTAGE, '10'),
+            date: '2021-02-01'
         );
         $fullTaxBreakdown = $calculator->fullTaxBreakDown();
         $this->assertArrayHasKey('netMonthlyIncome', $fullTaxBreakdown);
         $this->assertArrayHasKey('grossMonthlyIncome', $fullTaxBreakdown);
+        $this->assertArrayHasKey('additionalTaxableIncome', $fullTaxBreakdown);
         $this->assertArrayHasKey('nationalInsuranceScheme', $fullTaxBreakdown);
-        $this->assertArrayHasKey('pensionAmount', $fullTaxBreakdown);
+        $this->assertTrue(Arr::has($fullTaxBreakdown, 'voluntaryDeductions.pensionAmount'));
         $this->assertArrayHasKey('statutoryIncome', $fullTaxBreakdown);
         $this->assertArrayHasKey('educationTax', $fullTaxBreakdown);
         $this->assertArrayHasKey('nationalHousingTrust', $fullTaxBreakdown);
@@ -295,7 +346,6 @@ class TaxCalculatorUnitTest extends TestCase
     {
         return $this->parser->parse($moneyString, $this->currency);
     }
-
     protected function setupNIS(): void
     {
         NIS::factory()->create(
@@ -317,7 +367,6 @@ class TaxCalculatorUnitTest extends TestCase
             ],
         );
     }
-
     private function setupEducationTax()
     {
         EducationTax::factory()->create(

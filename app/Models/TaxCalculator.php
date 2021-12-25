@@ -4,6 +4,7 @@
 namespace App\Models;
 
 use App\Enums\PensionType;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\App;
 use InvalidArgumentException;
 use JetBrains\PhpStorm\ArrayShape;
@@ -16,6 +17,8 @@ use MoneyConfiguration;
 class TaxCalculator
 {
     private Money $grossMonthlyIncome;
+    private Money $additionalTaxableIncome;
+    private Money $totalEarnings;
     private Money $nisAnnualIncomeThreshold;
     private string $nisPercent;
     private string $educationTaxPercent;
@@ -23,46 +26,43 @@ class TaxCalculator
     public MoneyFormatter $formatter;
     public MoneyParser $parser;
     private array $incomeTaxMonthlyThresholds;
+    private array $voluntaryDeductions;
 
     public function __construct(
         public string $monthlyGross,
+        public ?string $otherTaxableIncome = null,
+        public ?Pension $monthlyPension = null,
+        public array $listOfVoluntaryDeductions = [],
         public ?Currency $currency = null,
         public ?string $date = null,
-        public ?Pension $monthlyPension = null,
     ) {
-        $this->formatter = App::make(MoneyFormatter::class);
-        $this->parser = App::make(MoneyParser::class);
+        $this->setupDefaultMoneyFormatterParserAndCurrency();
         // Setup Taxes
-        $nisConfiguration = NIS::findEntryForDate($date);
-        $nhtConfiguration = NHT::findEntryForDate($date);
-        $educationTaxConfiguration = EducationTax::findEntryForDate($date);
-        $incomeTaxConfiguration = IncomeTax::findEntryForDate($date);
+        list(
+            $nisConfiguration,
+            $nhtConfiguration,
+            $educationTaxConfiguration,
+            $incomeTaxConfiguration) = $this->configureTaxesForDate($date);
 
-        if ($nisConfiguration == null) {
-            throw new InvalidArgumentException("Unable to retrieve NIS values");
-        }
-        if ($nhtConfiguration == null) {
-            throw new InvalidArgumentException("Unable to retrieve NHT values");
-        }
-        if ($educationTaxConfiguration == null) {
-            throw new InvalidArgumentException("Unable to retrieve Education Tax values");
-        }
-        if ($incomeTaxConfiguration == null) {
-            throw new InvalidArgumentException("Unable to retrieve Income Tax values");
-        }
         // Setup percentages
         // Convert the value 3% to 0.03
-        $this->currency = $this->currency ?? MoneyConfiguration::defaultCurrency();
-
         $this->nisPercent = $nisConfiguration->rate_percentage / 100;
         $this->nhtPercent = $nhtConfiguration->rate_percentage / 100;
         $this->educationTaxPercent = $educationTaxConfiguration->rate_percentage / 100;
-
+        $this->nisAnnualIncomeThreshold = $nisConfiguration->annual_income_threshold;
         $this->incomeTaxMonthlyThresholds = $this->extractMonthlyFromAnnualThresholds($incomeTaxConfiguration->annual_thresholds,
             $this->currency);
 
+        $this->voluntaryDeductions = $this->extractDeductionsFromInputList($this->listOfVoluntaryDeductions,
+            $this->currency);
+
         $this->grossMonthlyIncome = $this->parse($this->monthlyGross);
-        $this->nisAnnualIncomeThreshold = $nisConfiguration->annual_income_threshold;
+
+        $this->additionalTaxableIncome = $this->otherTaxableIncome == null ?
+            $this->parse('0.00') : $this->parse($this->otherTaxableIncome);
+
+        $this->totalEarnings = $this->grossMonthlyIncome->add($this->additionalTaxableIncome);
+
     }
 
     public static function formatAsString(Money $money): string
@@ -76,17 +76,10 @@ class TaxCalculator
     public function nisAmount(): Money
     {
         $nisMaxMonthlyAmountBasedOnIncomeThreshold = $this->nisMaxYearlyAmountBasedOnIncomeThreshold()->divide('12');
-        $nisAmountUsingPercentageOfMonthlyGross = $this->grossMonthlyIncome->multiply($this->nisPercent);
+        $nisAmountUsingPercentageOfMonthlyGross = $this->totalEarnings->multiply($this->nisPercent);
         return min($nisMaxMonthlyAmountBasedOnIncomeThreshold, $nisAmountUsingPercentageOfMonthlyGross);
     }
 
-    /**
-     * @return Money
-     */
-    private function nisMaxYearlyAmountBasedOnIncomeThreshold(): Money
-    {
-        return $this->nisAnnualIncomeThreshold->multiply($this->nisPercent);
-    }
 
     /**
      * @return Money
@@ -106,8 +99,8 @@ class TaxCalculator
      */
     public function statutoryIncome(): Money
     {
-        // Statuatory Income = Total Income - Pension Contributions - NIS
-        return $this->grossMonthlyIncome->subtract($this->pensionAmount())->subtract($this->nisAmount());
+        // Statuatory Income = Total Earning - NIS - Pension
+        return $this->totalEarnings->subtract($this->pensionAmount())->subtract($this->nisAmount());
     }
 
     public function educationTaxAmount(): Money
@@ -117,7 +110,7 @@ class TaxCalculator
 
     public function nhtAmount(): Money
     {
-        return $this->grossMonthlyIncome->multiply($this->nhtPercent);
+        return $this->totalEarnings->multiply($this->nhtPercent);
     }
 
     public function incomeTaxAmount(): Money
@@ -141,9 +134,84 @@ class TaxCalculator
         return $this->parse('0.00');
     }
 
+
+    public function subtotalDeductions(): Money
+    {
+        return $this->nisAmount() //NIS
+        ->add($this->educationTaxAmount()) // Education Tax
+        ->add($this->pensionAmount()) // Pension
+        ->add($this->nhtAmount()); // NHT
+    }
+
+    public function totalStatutoryDeductions(): Money
+    {
+        return $this->nisAmount()
+            ->add($this->educationTaxAmount())
+            ->add($this->nhtAmount())
+            ->add($this->incomeTaxAmount());
+    }
+
+    public function totalVoluntaryDeductions(): Money
+    {
+        // Accumulator
+        return array_reduce(array_values($this->voluntaryDeductions),
+            function (Money $accum, Money $current) {
+                return $accum->add($current);
+            }, $this->pensionAmount()); // Include pension
+    }
+
+    public function totalDeductions(): Money
+    {
+        return $this->totalStatutoryDeductions()->add($this->totalVoluntaryDeductions());
+//        return $this->subtotalDeductions()->add($this->incomeTaxAmount());
+    }
+
+    public function netMonthlyIncome(): Money
+    {
+        return $this->totalEarnings->subtract($this->totalDeductions());
+    }
+
+    public function fullTaxBreakDown(): array
+    {
+        return [
+            'grossMonthlyIncome' => TaxCalculator::formatAsString($this->grossMonthlyIncome),
+            'additionalTaxableIncome' => TaxCalculator::formatAsString($this->additionalTaxableIncome),
+            'totalEarnings' => TaxCalculator::formatAsString($this->totalEarnings),
+            'nationalInsuranceScheme' => TaxCalculator::formatAsString($this->nisAmount()),
+            'voluntaryDeductions' => array_merge(['pensionAmount' => TaxCalculator::formatAsString($this->pensionAmount())],
+                $this->listOfVoluntaryDeductions),
+            'statutoryIncome' => TaxCalculator::formatAsString($this->statutoryIncome()),
+            'educationTax' => TaxCalculator::formatAsString($this->educationTaxAmount()),
+            'nationalHousingTrust' => TaxCalculator::formatAsString($this->nhtAmount()),
+            'incomeTax' => TaxCalculator::formatAsString($this->incomeTaxAmount()),
+            'totalDeductions' => TaxCalculator::formatAsString($this->totalDeductions()),
+            'netMonthlyIncome' => TaxCalculator::formatAsString($this->netMonthlyIncome()),
+        ];
+    }
+
+    private function extractDeductionsFromInputList(array $listOfVoluntaryDeductions, ?Currency $currency): array
+    {
+        // This section just converts the array from [["expense" => "1111']] to ["expense" => '1111]
+        // Basically flattens the array.
+        //Creates the multidimensional array
+        $arrayOfDeductions = array_map(function ($key, $value) use ($currency) {
+            return [$key => (App::make(MoneyParser::class))->parse($value, $currency)];
+        }, array_keys($listOfVoluntaryDeductions), $listOfVoluntaryDeductions);
+        //Flattens it
+        return array_merge(...array_values($arrayOfDeductions));
+    }
+
     private function parse(string $moneyString): Money
     {
         return $this->parser->parse($moneyString, $this->currency);
+    }
+
+    /**
+     * @return Money
+     */
+    private function nisMaxYearlyAmountBasedOnIncomeThreshold(): Money
+    {
+        return $this->nisAnnualIncomeThreshold->multiply($this->nisPercent);
     }
 
     private function extractMonthlyFromAnnualThresholds(array $annual_thresholds, Currency $currency): array
@@ -157,40 +225,36 @@ class TaxCalculator
         }, $annual_thresholds);
     }
 
-    public function subtotalDeductions(): Money
+    protected function setupDefaultMoneyFormatterParserAndCurrency(): void
     {
-        return $this->nisAmount() //NIS
-        ->add($this->educationTaxAmount()) // Education Tax
-        ->add($this->pensionAmount()) // Pension
-        ->add($this->nhtAmount()); // NHT
+        $this->formatter = App::make(MoneyFormatter::class);
+        $this->parser = App::make(MoneyParser::class);
+        $this->currency = $this->currency ?? MoneyConfiguration::defaultCurrency();
     }
 
-    public function totalDeductions(): Money
+    /**
+     * @param  string|null  $date
+     * @return array
+     */
+    protected function configureTaxesForDate(?string $date): array
     {
-        return $this->subtotalDeductions()->add($this->incomeTaxAmount());
-    }
+        $nisConfiguration = NIS::findEntryForDate($date);
+        $nhtConfiguration = NHT::findEntryForDate($date);
+        $educationTaxConfiguration = EducationTax::findEntryForDate($date);
+        $incomeTaxConfiguration = IncomeTax::findEntryForDate($date);
 
-    public function netMonthlyIncome(): Money
-    {
-        return $this->grossMonthlyIncome->subtract($this->totalDeductions());
-    }
-
-    #[ArrayShape([
-        'grossMonthlyIncome' => "string", 'nationalInsuranceScheme' => "string", 'pensionAmount' => "string",
-        'statutoryIncome' => "string", 'educationTax' => "string", 'nationalHousingTrust' => "string",
-        'incomeTax' => "string", 'totalDeductions' => "string", 'netMonthlyIncome' => "string"
-    ])] public function fullTaxBreakDown(): array
-    {
-        return [
-            'grossMonthlyIncome' => TaxCalculator::formatAsString($this->grossMonthlyIncome),
-            'nationalInsuranceScheme' => TaxCalculator::formatAsString($this->nisAmount()),
-            'pensionAmount' => TaxCalculator::formatAsString($this->pensionAmount()),
-            'statutoryIncome' => TaxCalculator::formatAsString($this->statutoryIncome()),
-            'educationTax' => TaxCalculator::formatAsString($this->educationTaxAmount()),
-            'nationalHousingTrust' => TaxCalculator::formatAsString($this->nhtAmount()),
-            'incomeTax' => TaxCalculator::formatAsString($this->incomeTaxAmount()),
-            'totalDeductions' => TaxCalculator::formatAsString($this->totalDeductions()),
-            'netMonthlyIncome' => TaxCalculator::formatAsString($this->netMonthlyIncome()),
-        ];
+        if ($nisConfiguration == null) {
+            throw new InvalidArgumentException("Unable to retrieve NIS values");
+        }
+        if ($nhtConfiguration == null) {
+            throw new InvalidArgumentException("Unable to retrieve NHT values");
+        }
+        if ($educationTaxConfiguration == null) {
+            throw new InvalidArgumentException("Unable to retrieve Education Tax values");
+        }
+        if ($incomeTaxConfiguration == null) {
+            throw new InvalidArgumentException("Unable to retrieve Income Tax values");
+        }
+        return array($nisConfiguration, $nhtConfiguration, $educationTaxConfiguration, $incomeTaxConfiguration);
     }
 }
