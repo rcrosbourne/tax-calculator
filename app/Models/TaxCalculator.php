@@ -16,6 +16,7 @@ class TaxCalculator
     private Money $nisAnnualIncomeThresholdAsMoney;
     private string $nisPercent;
     private string $educationTaxPercent;
+    private string $nhtPercent;
 
     /**
      * @throws Exception
@@ -26,15 +27,27 @@ class TaxCalculator
         public ?string $date = null,
         public ?Pension $monthlyPension = null
     ) {
-        $this->currency = $this->currency ?? MoneyConfiguration::defaultCurrency();
+        // Setup Taxes
         $nisConfiguration = NIS::findEntryForDate($date);
+        $nhtConfiguration = NHT::findEntryForDate($date);
         $educationTaxConfiguration = EducationTax::findEntryForDate($date);
+
         if ($nisConfiguration == null) {
             throw new InvalidArgumentException("Unable to retrieve NIS values");
         }
+        if ($nhtConfiguration == null) {
+            throw new InvalidArgumentException("Unable to retrieve NHT values");
+        }
+        if ($educationTaxConfiguration == null) {
+            throw new InvalidArgumentException("Unable to retrieve Education Tax values");
+        }
+        // Setup percentages
         // Convert the value 3% to 0.03
         $this->nisPercent = $nisConfiguration->rate_percentage / 100;
+        $this->nhtPercent = $nhtConfiguration->rate_percentage / 100;
         $this->educationTaxPercent = $educationTaxConfiguration->rate_percentage / 100;
+
+        $this->currency = $this->currency ?? MoneyConfiguration::defaultCurrency();
         $this->monthlyGrossAsMoney = MoneyConfiguration::defaultParser()->parse($this->monthlyGross, $this->currency);
         $this->nisAnnualIncomeThresholdAsMoney = $nisConfiguration->annual_income_threshold;
     }
@@ -89,5 +102,10 @@ class TaxCalculator
     public function educationTaxAmount(): Money
     {
         return $this->statutoryIncome()->multiply($this->educationTaxPercent);
+    }
+
+    public function nhtAmount(): Money
+    {
+        return $this->monthlyGrossAsMoney->multiply($this->nhtPercent);
     }
 }

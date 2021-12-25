@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Enums\PensionType;
 use App\Models\EducationTax;
+use App\Models\NHT;
 use App\Models\NIS;
 use App\Models\Pension;
 use App\Models\TaxCalculator;
@@ -33,6 +34,7 @@ class TaxCalculatorUnitTest extends TestCase
         $this->currency = MoneyConfiguration::defaultCurrency();
 
         $this->setupNIS();
+        $this->setupNHT();
         $this->setupEducationTax();
     }
 
@@ -154,10 +156,37 @@ class TaxCalculatorUnitTest extends TestCase
         $monthlyEducationTaxAmount = $calculator->educationTaxAmount();
         $this->assertEquals('4893.75', TaxCalculator::formatAsString($monthlyEducationTaxAmount));
     }
-
-    private function parse(string $string): Money
+    /** @test */
+    public function it_calculates_nht()
     {
-        return $this->parser->parse($string, $this->currency);
+        // Calculate education tax on statutory income
+
+        NIS::factory()->create([
+            'effective_date' => Carbon::now(),
+            'rate_percentage' => '3.0',
+            'annual_income_threshold' => MoneyConfiguration::defaultParser()->parse('3000000',
+                MoneyConfiguration::defaultCurrency())
+        ]);
+        EducationTax::factory()->create([
+            'effective_date' => Carbon::now(),
+            'rate_percentage' => '2.25',
+        ]);
+        NHT::factory()->create([
+            'effective_date' => Carbon::now(),
+            'rate_percentage' => '2.0',
+        ]);
+
+        $calculator = new TaxCalculator(
+            monthlyGross: '238841.00',
+        );
+        // NHT 2.0%
+        $monthlyNhtAmount = $calculator->nhtAmount();
+        $this->assertEquals('4776.82', TaxCalculator::formatAsString($monthlyNhtAmount));
+    }
+
+    private function parse(string $moneyString): Money
+    {
+        return $this->parser->parse($moneyString, $this->currency);
     }
 
     protected function setupNIS(): void
@@ -187,6 +216,14 @@ class TaxCalculatorUnitTest extends TestCase
         EducationTax::factory()->create(
             [
                 'effective_date' => '2021-01-01', 'rate_percentage' => '2.25',
+            ],
+        );
+    }
+    private function setupNHT()
+    {
+        NHT::factory()->create(
+            [
+                'effective_date' => '2021-01-01', 'rate_percentage' => '2.0',
             ],
         );
     }
