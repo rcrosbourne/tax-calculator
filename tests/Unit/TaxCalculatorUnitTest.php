@@ -184,6 +184,44 @@ class TaxCalculatorUnitTest extends TestCase
         $this->assertEquals('4776.82', TaxCalculator::formatAsString($monthlyNhtAmount));
     }
 
+    /** @test */
+    public function it_calculates_income_tax_for_income_below_threshold()
+    {
+        // Calculate education tax on statutory income
+        $calculator = new TaxCalculator(
+            monthlyGross: '100000.00',
+        );
+        // NHT 2.0%
+        $monthlyIncomeTaxAmount = $calculator->incomeTaxAmount();
+        $this->assertEquals('0.00', TaxCalculator::formatAsString($monthlyIncomeTaxAmount));
+    }
+
+    /** @test */
+    public function it_calculates_income_tax_for_income_above_25_percent_but_below_30_percent_threshold()
+    {
+        // Calculate education tax on statutory income
+        $calculator = new TaxCalculator(
+            monthlyGross: '150000.00',
+        );
+        // Income tax 25% monthly threshold = 1,500,096.00 / 12 = 125,008.00
+        $monthlyIncomeTaxAmount = $calculator->incomeTaxAmount();
+        $this->assertEquals('5123.00', TaxCalculator::formatAsString($monthlyIncomeTaxAmount));
+    }
+
+    /** @test */
+    public function it_calculates_income_tax_for_income_above_30_percent_threshold()
+    {
+        // Calculate education tax on statutory income
+        $calculator = new TaxCalculator(
+            monthlyGross: '600000.00',
+        );
+        // Stat = 592500 [(500000-125008) * 0.25 + (592500-500000) * 0.03] = [93748.00 + 27750.00 = 121,498.00]
+        // Income tax 25% monthly threshold = 1,500,096.00 / 12 = 125,008.00
+        // Income tax 30% monthly threshold = 6,000,000.00 / 12 = 500,000.00
+        $monthlyIncomeTaxAmount = $calculator->incomeTaxAmount();
+        $this->assertEquals('121498.00', TaxCalculator::formatAsString($monthlyIncomeTaxAmount));
+    }
+
     private function parse(string $moneyString): Money
     {
         return $this->parser->parse($moneyString, $this->currency);

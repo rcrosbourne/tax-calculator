@@ -114,6 +114,26 @@ class TaxCalculator
 
     public function incomeTaxAmount(): Money
     {
+        $annualIncomeTaxThresholds = [
+            ['annualThresholdAmount' => $this->parse('1500096.00'), 'rate_percent'=> '25'],
+            ['annualThresholdAmount' => $this->parse('6000000.00'), 'rate_percent' => '30']
+        ];
+        // Get Statutory Income
+        $monthlyStatutoryIncome = $this->statutoryIncome();
+        //Is Statutory > first monthly threshold
+        $firstMonthlyThreshold = $annualIncomeTaxThresholds[0]['annualThresholdAmount']->divide('12');
+        $firstMonthlyThresholdRate = strval($annualIncomeTaxThresholds[0]['rate_percent'] / 100);
+        $secondMonthlyThreshold = $annualIncomeTaxThresholds[1]['annualThresholdAmount']->divide('12');
+        $secondMonthlyThresholdRate = strval($annualIncomeTaxThresholds[1]['rate_percent'] / 100);
+
+        if ($monthlyStatutoryIncome->greaterThan($secondMonthlyThreshold)) {
+           $secondThresholdAmount =  ($monthlyStatutoryIncome->subtract($secondMonthlyThreshold))->multiply($secondMonthlyThresholdRate);
+           $firstThresholdAmount = ($secondMonthlyThreshold->subtract($firstMonthlyThreshold))->multiply($firstMonthlyThresholdRate);
+           return $secondThresholdAmount->add($firstThresholdAmount);
+        }
+        if ($monthlyStatutoryIncome->greaterThan($firstMonthlyThreshold)) {
+            return ($monthlyStatutoryIncome->subtract($firstMonthlyThreshold))->multiply($firstMonthlyThresholdRate);
+        }
         return $this->parse('0.00');
     }
 
