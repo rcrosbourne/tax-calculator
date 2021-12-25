@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Enums\PensionType;
 use App\Models\EducationTax;
+use App\Models\IncomeTax;
 use App\Models\NHT;
 use App\Models\NIS;
 use App\Models\Pension;
@@ -36,6 +37,8 @@ class TaxCalculatorUnitTest extends TestCase
         $this->setupNIS();
         $this->setupNHT();
         $this->setupEducationTax();
+        $this->setupIncomeTax();
+
     }
 
     /** @test */
@@ -262,6 +265,18 @@ class TaxCalculatorUnitTest extends TestCase
         NHT::factory()->create(
             [
                 'effective_date' => '2021-01-01', 'rate_percentage' => '2.0',
+            ],
+        );
+    }
+    private function setupIncomeTax()
+    {
+        IncomeTax::factory()->create(
+            [
+                'effective_date' => '2021-01-01',
+                'annual_thresholds' => [
+                    ['amount' => '1500096.00', 'rate_percent' => '25'],
+                    ['amount' => '6000000.00', 'rate_percent' => '30']
+                ],
             ],
         );
     }

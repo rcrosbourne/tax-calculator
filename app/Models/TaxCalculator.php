@@ -4,11 +4,9 @@
 namespace App\Models;
 
 use App\Enums\PensionType;
-use Exception;
 use Illuminate\Support\Facades\App;
 use InvalidArgumentException;
 use Money\Currency;
-use Money\Formatter\DecimalMoneyFormatter;
 use Money\Money;
 use Money\MoneyFormatter;
 use Money\MoneyParser;
@@ -36,6 +34,7 @@ class TaxCalculator
         $nisConfiguration = NIS::findEntryForDate($date);
         $nhtConfiguration = NHT::findEntryForDate($date);
         $educationTaxConfiguration = EducationTax::findEntryForDate($date);
+        $incomeTaxConfiguration = IncomeTax::findEntryForDate($date);
 
         if ($nisConfiguration == null) {
             throw new InvalidArgumentException("Unable to retrieve NIS values");
@@ -46,13 +45,20 @@ class TaxCalculator
         if ($educationTaxConfiguration == null) {
             throw new InvalidArgumentException("Unable to retrieve Education Tax values");
         }
+        if ($incomeTaxConfiguration == null) {
+            throw new InvalidArgumentException("Unable to retrieve Income Tax values");
+        }
         // Setup percentages
         // Convert the value 3% to 0.03
+        $this->currency = $this->currency ?? MoneyConfiguration::defaultCurrency();
+
         $this->nisPercent = $nisConfiguration->rate_percentage / 100;
         $this->nhtPercent = $nhtConfiguration->rate_percentage / 100;
         $this->educationTaxPercent = $educationTaxConfiguration->rate_percentage / 100;
 
-        $this->currency = $this->currency ?? MoneyConfiguration::defaultCurrency();
+        $this->incomeTaxMonthlyThresholds = $this->extractMonthlyFromAnnualThresholds($incomeTaxConfiguration->annual_thresholds,
+            $this->currency);
+
         $this->monthlyGrossAsMoney = $this->parse($this->monthlyGross);
         $this->nisAnnualIncomeThresholdAsMoney = $nisConfiguration->annual_income_threshold;
     }
@@ -114,22 +120,18 @@ class TaxCalculator
 
     public function incomeTaxAmount(): Money
     {
-        $annualIncomeTaxThresholds = [
-            ['annualThresholdAmount' => $this->parse('1500096.00'), 'rate_percent'=> '25'],
-            ['annualThresholdAmount' => $this->parse('6000000.00'), 'rate_percent' => '30']
-        ];
         // Get Statutory Income
         $monthlyStatutoryIncome = $this->statutoryIncome();
         //Is Statutory > first monthly threshold
-        $firstMonthlyThreshold = $annualIncomeTaxThresholds[0]['annualThresholdAmount']->divide('12');
-        $firstMonthlyThresholdRate = strval($annualIncomeTaxThresholds[0]['rate_percent'] / 100);
-        $secondMonthlyThreshold = $annualIncomeTaxThresholds[1]['annualThresholdAmount']->divide('12');
-        $secondMonthlyThresholdRate = strval($annualIncomeTaxThresholds[1]['rate_percent'] / 100);
+        $firstMonthlyThreshold = $this->incomeTaxMonthlyThresholds[0]['amount'];
+        $firstMonthlyThresholdRate = $this->incomeTaxMonthlyThresholds[0]['rate_percent'];
+        $secondMonthlyThreshold = $this->incomeTaxMonthlyThresholds[1]['amount'];
+        $secondMonthlyThresholdRate = $this->incomeTaxMonthlyThresholds[1]['rate_percent'];
 
         if ($monthlyStatutoryIncome->greaterThan($secondMonthlyThreshold)) {
-           $secondThresholdAmount =  ($monthlyStatutoryIncome->subtract($secondMonthlyThreshold))->multiply($secondMonthlyThresholdRate);
-           $firstThresholdAmount = ($secondMonthlyThreshold->subtract($firstMonthlyThreshold))->multiply($firstMonthlyThresholdRate);
-           return $secondThresholdAmount->add($firstThresholdAmount);
+            $secondThresholdAmount = ($monthlyStatutoryIncome->subtract($secondMonthlyThreshold))->multiply($secondMonthlyThresholdRate);
+            $firstThresholdAmount = ($secondMonthlyThreshold->subtract($firstMonthlyThreshold))->multiply($firstMonthlyThresholdRate);
+            return $secondThresholdAmount->add($firstThresholdAmount);
         }
         if ($monthlyStatutoryIncome->greaterThan($firstMonthlyThreshold)) {
             return ($monthlyStatutoryIncome->subtract($firstMonthlyThreshold))->multiply($firstMonthlyThresholdRate);
@@ -140,5 +142,16 @@ class TaxCalculator
     private function parse(string $moneyString): Money
     {
         return $this->parser->parse($moneyString, $this->currency);
+    }
+
+    private function extractMonthlyFromAnnualThresholds(array $annual_thresholds, Currency $currency): array
+    {
+        //return an array with money in monthly
+        return array_map(function ($entry) use ($currency) {
+            return [
+                "amount" => (App::make(MoneyParser::class))->parse($entry['amount'], $currency)->divide('12'),
+                "rate_percent" => strval($entry["rate_percent"] / 100)
+            ];
+        }, $annual_thresholds);
     }
 }
