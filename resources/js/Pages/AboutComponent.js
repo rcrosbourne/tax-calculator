@@ -6,7 +6,7 @@ export default function AboutComponent() {
   return (
     <div>
       <Head title="About" />
-      <h1>Welcome</h1>
+      <h1 className="text-xl text-red-500">Welcome</h1>
       <p>Hello Ziggy, welcome to your first Inertia app!</p>
     </div>
   )
