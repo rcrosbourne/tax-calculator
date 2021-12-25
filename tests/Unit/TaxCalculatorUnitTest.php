@@ -225,6 +225,72 @@ class TaxCalculatorUnitTest extends TestCase
         $this->assertEquals('121498.00', TaxCalculator::formatAsString($monthlyIncomeTaxAmount));
     }
 
+    /** @test */
+    public function it_calculates_subtotal_deductions_not_including_pension()
+    {
+        // Calculate education tax on statutory income
+        $calculator = new TaxCalculator(
+            monthlyGross: '200000.00',
+        );
+        // Subtotal deductions are all the deductions excluding income tax
+        // subTotal = gross - (nis + pension + nht + education tax)
+        // nis = 6000, edu = 4365.00, pension 0, nht 4000
+        $subtotalDeductions = $calculator->subtotalDeductions();
+        $this->assertEquals('14365.00', TaxCalculator::formatAsString($subtotalDeductions));
+    }
+    /** @test */
+    public function it_calculates_subtotal_deductions_including_pension()
+    {
+        // Calculate education tax on statutory income
+        $calculator = new TaxCalculator(
+            monthlyGross: '200000.00',
+            monthlyPension: new Pension(type: PensionType::PERCENTAGE, value: '10')
+        );
+        // Subtotal deductions are all the deductions excluding income tax
+        // subTotal = gross - (nis + pension + nht + education tax)
+        // nis = 6000, edu = 3915.00, pension 20000, nht 4000
+        $subtotalDeductions = $calculator->subtotalDeductions();
+        $this->assertEquals('33915.00', TaxCalculator::formatAsString($subtotalDeductions));
+    }
+
+    /** @test */
+    public function it_calculates_net_pay()
+    {
+        // Calculate education tax on statutory income
+        $calculator = new TaxCalculator(
+            monthlyGross: '200000.00',
+            monthlyPension: new Pension(type: PensionType::PERCENTAGE, value: '10')
+        );
+        // Subtotal deductions are all the deductions excluding income tax
+        // subTotal = gross - (nis + pension + nht + education tax)
+        // nis = 6000, edu = 3915.00, pension 20000, nht 4000 income tax 12248.00 + 93748
+        //total deductions = 46163.00
+        $netMonthlyIncome = $calculator->netMonthlyIncome();
+        $this->assertEquals('153837.00', TaxCalculator::formatAsString($netMonthlyIncome));
+    }
+
+    /** @test */
+    public function it_can_return_full_tax_breakdown()
+    {
+        // Calculate education tax on statutory income
+        $calculator = new TaxCalculator(
+            monthlyGross: '239703.00',
+            date: '2021-05-01'
+        );
+        $fullTaxBreakdown = $calculator->fullTaxBreakDown();
+        $this->assertArrayHasKey('netMonthlyIncome', $fullTaxBreakdown);
+        $this->assertArrayHasKey('grossMonthlyIncome', $fullTaxBreakdown);
+        $this->assertArrayHasKey('nationalInsuranceScheme', $fullTaxBreakdown);
+        $this->assertArrayHasKey('pensionAmount', $fullTaxBreakdown);
+        $this->assertArrayHasKey('statutoryIncome', $fullTaxBreakdown);
+        $this->assertArrayHasKey('educationTax', $fullTaxBreakdown);
+        $this->assertArrayHasKey('nationalHousingTrust', $fullTaxBreakdown);
+        $this->assertArrayHasKey('incomeTax', $fullTaxBreakdown);
+        $this->assertArrayHasKey('totalDeductions', $fullTaxBreakdown);
+        $this->assertArrayHasKey('netMonthlyIncome', $fullTaxBreakdown);
+    }
+
+
     private function parse(string $moneyString): Money
     {
         return $this->parser->parse($moneyString, $this->currency);
