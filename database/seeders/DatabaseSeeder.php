@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         // \App\Models\User::factory(10)->create();
         $this->call(NISSeeder::class);
+        $this->call(NHTSeeder::class);
         $this->call(EducationTaxSeeder::class);
     }
 }
