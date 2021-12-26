@@ -4042,14 +4042,14 @@ function Home() {
               children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsxs)("div", {
                 className: "relative py-5 flex items-center justify-center lg:justify-between",
                 children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)("div", {
-                  className: "absolute left-0 flex-shrink-0 lg:static",
+                  className: "absolute left-0 flex-shrink-0 lg:static pt-2",
                   children: /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsxs)("a", {
                     href: "#",
                     children: [/*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)("span", {
                       className: "sr-only",
                       children: "Workflow"
                     }), /*#__PURE__*/(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_3__.jsx)("h1", {
-                      className: "text-white",
+                      className: "text-white font-island text-5xl",
                       children: "Tax Calculator"
                     })]
                   })

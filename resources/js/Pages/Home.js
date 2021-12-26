@@ -44,10 +44,10 @@ export default function Home() {
                             <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:max-w-7xl lg:px-8">
                                 <div className="relative py-5 flex items-center justify-center lg:justify-between">
                                     {/* Logo */}
-                                    <div className="absolute left-0 flex-shrink-0 lg:static">
+                                    <div className="absolute left-0 flex-shrink-0 lg:static pt-2">
                                         <a href="#">
                                             <span className="sr-only">Workflow</span>
-                                            <h1 className="text-white">Tax Calculator</h1>
+                                            <h1 className="text-white font-island text-5xl">Tax Calculator</h1>
                                         </a>
                                     </div>
 

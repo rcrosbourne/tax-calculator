@@ -5,7 +5,12 @@ module.exports = {
         "./resources/**/*.vue",
     ],
     theme: {
-        extend: {},
+        extend: {
+            fontFamily: {
+                'island': ['Island Moments', 'cursive']
+            }
+
+        },
     },
     plugins: [
         require('@tailwindcss/forms')
