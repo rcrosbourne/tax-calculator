@@ -339,6 +339,7 @@ class TaxCalculatorUnitTest extends TestCase
         $this->assertArrayHasKey('incomeTax', $fullTaxBreakdown);
         $this->assertArrayHasKey('totalDeductions', $fullTaxBreakdown);
         $this->assertArrayHasKey('netMonthlyIncome', $fullTaxBreakdown);
+        dump($fullTaxBreakdown);
     }
 
 
