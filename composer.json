@@ -10,10 +10,12 @@
         "guzzlehttp/guzzle": "^7.0.1",
         "inertiajs/inertia-laravel": "^0.4.5",
         "laravel/framework": "^8.75",
+        "laravel/octane": "^1.1",
         "laravel/sanctum": "^2.11",
         "laravel/tinker": "^2.5",
         "laravel/vapor-core": "^2.17",
-        "moneyphp/money": "^4.0"
+        "moneyphp/money": "^4.0",
+        "spiral/roadrunner": "^2.0"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^2.10",
