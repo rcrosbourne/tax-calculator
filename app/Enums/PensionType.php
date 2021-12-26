@@ -4,8 +4,8 @@
 namespace App\Enums;
 
 
-enum  PensionType
+enum  PensionType : string
 {
-    case FIXED;
-    case PERCENTAGE;
+    case FIXED = 'FIXED';
+    case PERCENTAGE = 'PERCENTAGE';
 }

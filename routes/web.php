@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\TaxCalculatorController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,3 +15,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::inertia('/', 'Home');
+
+Route::post('calculate',
+    [TaxCalculatorController::class, 'store'])
+    ->name('calculate');

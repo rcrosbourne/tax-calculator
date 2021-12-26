@@ -1,7 +1,5 @@
-import {Fragment} from 'react'
-import {Menu, Popover, Transition} from '@headlessui/react'
-import {BellIcon, MenuIcon, QuestionMarkCircleIcon, XIcon} from '@heroicons/react/outline'
-import {SearchIcon} from '@heroicons/react/solid'
+import {Popover} from '@headlessui/react'
+import {useForm} from '@inertiajs/inertia-react'
 
 const user = {
     name: 'Tom Cook',
@@ -26,7 +24,22 @@ function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
 }
 
-export default function Home() {
+export default function Home({breakdown}) {
+    const {data, setData, post, processing, errors, reset} = useForm({
+        monthlyGross: '',
+        otherIncome: '',
+        pensionValue: '',
+        pensionType: 'PERCENTAGE',
+        otherDeductions: '0.00',
+    })
+
+    function submit(e) {
+        e.preventDefault()
+        post('/calculate', {
+            preserveScroll: true,
+        });
+    }
+
     return (
         <>
             {/*
@@ -109,7 +122,7 @@ export default function Home() {
                                     </h2>
                                     <div className="rounded-lg bg-white overflow-hidden shadow">
                                         <div className="p-6">
-                                            <form className="space-y-8 divide-y divide-gray-200">
+                                            <form className="space-y-8 divide-y divide-gray-200" onSubmit={submit}>
                                                 <div className="space-y-8 divide-y divide-gray-200 sm:space-y-5">
                                                     <div>
                                                         <div>
@@ -124,7 +137,7 @@ export default function Home() {
                                                         <div className="mt-6 sm:mt-5 space-y-6 sm:space-y-5">
                                                             <div
                                                                 className="sm:grid sm:grid-cols-3 sm:gap-4 sm:items-start sm:border-t sm:border-gray-200 sm:pt-5">
-                                                                <label htmlFor="other_deductions"
+                                                                <label htmlFor="monthlyGross"
                                                                        className="block text-sm font-medium text-gray-700 sm:mt-px sm:pt-2">
                                                                     Monthly Gross
                                                                 </label>
@@ -136,11 +149,13 @@ export default function Home() {
                                                                     </div>
                                                                     <input
                                                                         type="number"
-                                                                        name="other_deductions"
-                                                                        id="other_deductions"
+                                                                        name="monthlyGross"
+                                                                        id="monthlyGross"
                                                                         className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
                                                                         placeholder="0.00"
                                                                         aria-describedby="price-currency"
+                                                                        value={data.monthlyGross}
+                                                                        onChange={e => setData('monthlyGross', e.target.value)}
                                                                     />
                                                                     <div
                                                                         className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -154,7 +169,7 @@ export default function Home() {
                                                         <div className="mt-6 sm:mt-5 space-y-6 sm:space-y-5">
                                                             <div
                                                                 className="sm:grid sm:grid-cols-3 sm:gap-4 sm:items-start sm:border-t sm:border-gray-200 sm:pt-5">
-                                                                <label htmlFor="other_deductions"
+                                                                <label htmlFor="otherIncome"
                                                                        className="block text-sm font-medium text-gray-700 sm:mt-px sm:pt-2">
                                                                     Other Taxable Income
                                                                 </label>
@@ -166,11 +181,14 @@ export default function Home() {
                                                                     </div>
                                                                     <input
                                                                         type="number"
-                                                                        name="other_deductions"
-                                                                        id="other_deductions"
+                                                                        name="otherIncome"
+                                                                        id="otherIncome"
                                                                         className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
                                                                         placeholder="0.00"
                                                                         aria-describedby="price-currency"
+                                                                        value={data.otherIncome}
+                                                                        onChange={e => setData('otherIncome', e.target.value)}
+
                                                                     />
                                                                     <div
                                                                         className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -195,7 +213,7 @@ export default function Home() {
 
                                                             <div
                                                                 className="sm:grid sm:grid-cols-3 sm:gap-4 sm:items-start sm:border-t sm:border-gray-200 sm:pt-5">
-                                                                <label htmlFor="pension"
+                                                                <label htmlFor="pensionValue"
                                                                        className="block text-sm font-medium text-gray-700 sm:mt-px sm:pt-2">
                                                                     Pension
                                                                 </label>
@@ -205,23 +223,27 @@ export default function Home() {
                                                                     </div>
                                                                     <input
                                                                         type="number"
-                                                                        name="pension"
-                                                                        id="pension"
+                                                                        name="pensionValue"
+                                                                        id="pensionValue"
                                                                         className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
                                                                         placeholder="10.00"
+                                                                        value={data.pensionValue}
+                                                                        onChange={e => setData('pensionValue', e.target.value)}
                                                                     />
                                                                     <div
                                                                         className="absolute inset-y-0 right-0 flex items-center">
                                                                         <label htmlFor="currency" className="sr-only">
-                                                                            Currency
+                                                                            Pension Type
                                                                         </label>
                                                                         <select
-                                                                            id="currency"
-                                                                            name="currency"
+                                                                            id="pensionType"
+                                                                            name="pensionType"
                                                                             className="focus:ring-indigo-500 focus:border-indigo-500 h-full py-0 pl-2 pr-7 border-transparent bg-transparent text-gray-500 sm:text-sm rounded-md"
+                                                                            value={data.pensionType}
+                                                                            onChange={e => setData('pensionType', e.target.value)}
                                                                         >
-                                                                            <option>percent</option>
-                                                                            <option>dollars</option>
+                                                                            <option value="PERCENTAGE">percent</option>
+                                                                            <option value="FIXED">dollars</option>
                                                                         </select>
                                                                     </div>
                                                                 </div>
@@ -241,11 +263,14 @@ export default function Home() {
                                                                     </div>
                                                                     <input
                                                                         type="number"
-                                                                        name="other_deductions"
-                                                                        id="other_deductions"
+                                                                        name="otherDeductions"
+                                                                        id="otherDeductions"
                                                                         className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md"
                                                                         placeholder="0.00"
                                                                         aria-describedby="price-currency"
+                                                                        value={data.otherDeductions}
+                                                                        onChange={e => setData('otherDeductions', e.target.value)}
+
                                                                     />
                                                                     <div
                                                                         className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -265,6 +290,7 @@ export default function Home() {
                                                         <button
                                                             type="button"
                                                             className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                                                            onClick={() => reset()}
                                                         >
                                                             Reset
                                                         </button>
@@ -296,13 +322,13 @@ export default function Home() {
                                                 className="mt-16 bg-gray-50 rounded-lg px-4 py-6 sm:p-6 lg:p-8 lg:mt-0 lg:col-span-5"
                                             >
                                                 <h2 id="summary-heading" className="text-lg font-medium text-gray-900">
-                                                   Tax Breakdown
+                                                    Tax Breakdown
                                                 </h2>
 
                                                 <dl className="mt-6 space-y-4">
                                                     <div className="flex items-center justify-between">
                                                         <dt className="text-sm text-gray-600">Total Earnings</dt>
-                                                        <dd className="text-sm font-medium text-gray-900">$264,750.00</dd>
+                                                        <dd className="text-sm font-medium text-gray-900">${breakdown?.totalEarnings || '0.00'}</dd>
                                                     </div>
                                                     <div
                                                         className="border-t border-gray-200 pt-4 flex items-center justify-between">
@@ -313,7 +339,7 @@ export default function Home() {
 
                                                             </a>
                                                         </dt>
-                                                        <dd className="text-sm font-medium text-red-900">($3,750.00)</dd>
+                                                        <dd className="text-sm font-medium text-red-900">(${breakdown?.nationalInsuranceScheme})</dd>
                                                     </div>
                                                     <div
                                                         className="border-t border-gray-200 pt-4 flex items-center justify-between">
@@ -324,7 +350,7 @@ export default function Home() {
 
                                                             </a>
                                                         </dt>
-                                                        <dd className="text-sm font-medium text-red-900">($25,375.00)</dd>
+                                                        <dd className="text-sm font-medium text-red-900">(${breakdown?.voluntaryDeductions?.pensionAmount})</dd>
                                                     </div>
                                                     <div
                                                         className="border-t border-gray-200 pt-4 flex items-center justify-between">
@@ -334,7 +360,7 @@ export default function Home() {
                                                                className="ml-2 flex-shrink-0 text-gray-400 hover:text-gray-500">
                                                             </a>
                                                         </dt>
-                                                        <dd className="text-sm font-medium text-red-900">($5,301.56)</dd>
+                                                        <dd className="text-sm font-medium text-red-900">(${breakdown?.educationTax})</dd>
                                                     </div>
                                                     <div
                                                         className="border-t border-gray-200 pt-4 flex items-center justify-between">
@@ -344,7 +370,7 @@ export default function Home() {
                                                                className="ml-2 flex-shrink-0 text-gray-400 hover:text-gray-500">
                                                             </a>
                                                         </dt>
-                                                        <dd className="text-sm font-medium text-red-900">($5,295.00)</dd>
+                                                        <dd className="text-sm font-medium text-red-900">(${breakdown?.nationalHousingTrust})</dd>
                                                     </div>
                                                     <div
                                                         className="border-t border-gray-200 pt-4 flex items-center justify-between">
@@ -354,7 +380,7 @@ export default function Home() {
                                                                className="ml-2 flex-shrink-0 text-gray-400 hover:text-gray-500">
                                                             </a>
                                                         </dt>
-                                                        <dd className="text-sm font-medium text-red-900">($27,654.25)</dd>
+                                                        <dd className="text-sm font-medium text-red-900">(${breakdown?.incomeTax})</dd>
                                                     </div>
                                                     <div
                                                         className="border-t border-gray-200 pt-4 flex items-center justify-between">
@@ -364,7 +390,7 @@ export default function Home() {
                                                                className="ml-2 flex-shrink-0 text-gray-400 hover:text-gray-500">
                                                             </a>
                                                         </dt>
-                                                        <dd className="text-sm font-medium text-red-900">($12,654.25)</dd>
+                                                        <dd className="text-sm font-medium text-red-900">(${breakdown?.voluntaryDeductions?.deductions})</dd>
                                                     </div>
                                                     <div
                                                         className="border-t border-gray-200 pt-4 flex items-center justify-between">
@@ -378,7 +404,7 @@ export default function Home() {
                                                     <div
                                                         className="text-center w-full bg-indigo-600 border border-transparent rounded-md shadow-sm py-3 px-4 text-2xl md:text-3xl font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-50 focus:ring-indigo-500"
                                                     >
-                                                       $197,374.19
+                                                        ${breakdown?.netMonthlyIncome}
                                                     </div>
                                                 </div>
                                             </section>
