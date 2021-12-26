@@ -4,9 +4,11 @@ environments:
     production:
         memory: 1024
         cli-memory: 512
-        runtime: 'php-8.1:al2'
+        runtime: 'docker'
         octane: true
-        database: tax-calulcator-production-db
+        database: tax-calculator-production-db
+        octane-database-session-persist: true
+        octane-database-session-ttl: 10
         build:
             - 'COMPOSER_MIRROR_PATH_REPOS=1 composer install --no-dev'
             - 'php artisan event:cache'
