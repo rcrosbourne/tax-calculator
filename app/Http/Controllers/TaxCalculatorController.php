@@ -28,7 +28,10 @@ class TaxCalculatorController extends Controller
            listOfVoluntaryDeductions: ["deductions" => $validated['otherDeductions']]
        );
 
-       $taxBreakdown = $calculator->fullTaxBreakDown();
+
+       $taxBreakdown = array_map(
+           fn($entry) => number_format(floatval($entry), 2), // Add the thousand separator
+           $calculator->fullTaxBreakDown());
 
        return inertia('Home', ['breakdown' => $taxBreakdown]);
     }

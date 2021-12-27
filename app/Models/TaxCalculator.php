@@ -77,7 +77,7 @@ class TaxCalculator
     {
         $nisMaxMonthlyAmountBasedOnIncomeThreshold = $this->nisMaxYearlyAmountBasedOnIncomeThreshold()->divide('12');
         $nisAmountUsingPercentageOfMonthlyGross = $this->totalEarnings->multiply($this->nisPercent);
-        return min($nisMaxMonthlyAmountBasedOnIncomeThreshold, $nisAmountUsingPercentageOfMonthlyGross);
+        return Money::min($nisMaxMonthlyAmountBasedOnIncomeThreshold, $nisAmountUsingPercentageOfMonthlyGross);
     }
 
 

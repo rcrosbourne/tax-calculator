@@ -1,5 +1,7 @@
 import {Popover} from '@headlessui/react'
 import {useForm} from '@inertiajs/inertia-react'
+import React, {useEffect} from "react";
+import {Inertia} from "@inertiajs/inertia";
 
 const user = {
     name: 'Tom Cook',
@@ -24,19 +26,31 @@ function classNames(...classes) {
     return classes.filter(Boolean).join(' ')
 }
 
+let inputData = {
+    monthlyGross: '',
+    otherIncome: '',
+    pensionValue: '',
+    pensionType: 'PERCENTAGE',
+    otherDeductions: '',
+}
 export default function Home({breakdown}) {
-    const {data, setData, post, processing, errors, reset} = useForm({
-        monthlyGross: '',
-        otherIncome: '',
-        pensionValue: '',
-        pensionType: 'PERCENTAGE',
-        otherDeductions: '0.00',
-    })
+    const {data, setData, post, processing, errors, reset, transform} = useForm(inputData)
+
+    transform((data) => {
+       for(const key in data) {
+           if(data[key] === '') {
+               data[key] = '0.00';
+           }
+       }
+       return data;
+    });
 
     function submit(e) {
-        e.preventDefault()
+        e.preventDefault();
+        //fix data
         post('/calculate', {
             preserveScroll: true,
+            onSuccess: () => {Inertia.visit('/')}
         });
     }
 

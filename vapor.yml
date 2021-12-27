@@ -7,6 +7,7 @@ environments:
         runtime: 'docker'
         octane: true
         database: tax-calculator-production-db
+        domain: taxcalculator.rcrosbourne.dev
         octane-database-session-persist: true
         octane-database-session-ttl: 10
         build:
