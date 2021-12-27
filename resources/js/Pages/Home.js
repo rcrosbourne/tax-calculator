@@ -50,7 +50,7 @@ export default function Home({breakdown}) {
         //fix data
         post('/calculate', {
             preserveScroll: true,
-            onSuccess: () => {Inertia.visit('/')}
+            //onSuccess: () => {Inertia.visit('/')}
         });
     }
 

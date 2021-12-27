@@ -4062,10 +4062,8 @@ function Home(_ref) {
     e.preventDefault(); //fix data
 
     post('/calculate', {
-      preserveScroll: true,
-      onSuccess: function onSuccess() {
-        _inertiajs_inertia__WEBPACK_IMPORTED_MODULE_2__.Inertia.visit('/');
-      }
+      preserveScroll: true //onSuccess: () => {Inertia.visit('/')}
+
     });
   }
 
