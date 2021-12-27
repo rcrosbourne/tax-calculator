@@ -33,10 +33,17 @@ class ApiTaxCalculatorController extends Controller
             listOfVoluntaryDeductions: ["deductions" => $validated['otherDeductions']]
         );
 
-
-        $taxBreakdown = array_map(
+        $breakdown = $calculator->fullTaxBreakDown();
+        $withoutVoluntary = array_filter($breakdown, fn ($item) => $item !== 'voluntaryDeductions', ARRAY_FILTER_USE_KEY);
+        $withVoluntary = [...array_filter($breakdown, fn ($item) => $item === 'voluntaryDeductions', ARRAY_FILTER_USE_KEY)];
+        $firstArray = array_map(
             fn($entry) => number_format(floatval($entry), 2), // Add the thousand separator
-            $calculator->fullTaxBreakDown());
+            $withoutVoluntary);
+        $secondArray = array_map(
+            fn($entry) => array_map(fn ($entry2) => number_format(floatval($entry2), 2), $entry),
+            $withVoluntary);
+        $taxBreakdown = array_merge($firstArray, $secondArray);
+
 
         return response()->json(['breakdown' => $taxBreakdown]);
     }
