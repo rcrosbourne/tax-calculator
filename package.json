@@ -19,15 +19,6 @@
         "laravel-mix": "^6.0.6",
         "lodash": "^4.17.19",
         "postcss": "^8.4.5",
-        "react-refresh": "^0.11.0",
         "tailwindcss": "^3.0.7"
-    },
-    "dependencies": {
-        "@headlessui/react": "^1.4.2",
-        "@inertiajs/inertia": "^0.10.1",
-        "@inertiajs/inertia-react": "^0.7.1",
-        "@inertiajs/progress": "^0.2.6",
-        "react": "^17.0.2",
-        "react-dom": "^17.0.2"
     }
 }
