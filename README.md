@@ -1,6 +1,9 @@
 <p align="center">
-<a href="https://calculator.rcrosbourne.dev" target="_blank"><img src="https://github.com/rcrosbourne/tax-calculator/actions/workflows/tax-calculator.yml/badge.svg)"  alt="workflow badge"/></a>
+<a href="https://github.com/rcrosbourne/tax-calculator/actions">
+<img src="https://github.com/rcrosbourne/tax-calculator/actions/workflows/tax-calculator.yml/badge.svg" alt="Build Status">
+</a>
 </p>
+
 ## Tax Calculator
 
 This is the server side project for a simple Tax calculator based on the statues of Jamaica:
