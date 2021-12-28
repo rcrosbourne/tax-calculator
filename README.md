@@ -1,4 +1,4 @@
-<p align="center">
+<p align="left">
 <a href="https://github.com/rcrosbourne/tax-calculator/actions">
 <img src="https://github.com/rcrosbourne/tax-calculator/actions/workflows/tax-calculator.yml/badge.svg" alt="Build Status">
 </a>
